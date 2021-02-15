@@ -1,8 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
 
 const authRoutes = require('./routes/auth');
+
+dotenv.config();
 
 const app = express();
 const port = 8000;
@@ -29,10 +32,10 @@ app.use((error, req, res, next) => {
 });
 
 mongoose
-  .connect(
-    'mongodb+srv://oswaldozarate:gB9q2JTUF@cluster0.pqb6f.mongodb.net/video-app?retryWrites=true&w=majority',
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  )
+  .connect(process.env.MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then((result) => {
     console.log(`listening on port ${port}`);
     app.listen(port);

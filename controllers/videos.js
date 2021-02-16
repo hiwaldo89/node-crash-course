@@ -30,6 +30,44 @@ exports.getVideos = (req, res, next) => {
     });
 };
 
+exports.getVideoById = (req, res, next) => {
+  const videoId = req.params.videoId;
+  Video.findById(videoId)
+    .then((video) => {
+      if (!video) {
+        const error = new Error('Cannot find video with that id');
+        error.statusCode = 404;
+        throw error;
+      }
+      res.status(200).json({ message: 'Fetched video', video });
+    })
+    .catch((e) => {
+      if (!e.statusCode) {
+        e.statusCode = 500;
+      }
+      next(e);
+    });
+};
+
+exports.getUserVideos = (req, res, next) => {
+  const userId = req.params.userId;
+  User.findById(userId)
+    .then((user) => {
+      if (!user) {
+        const error = new Error('Cannot find user');
+        error.statusCode = 404;
+        throw error;
+      }
+      res.status(200).json({ message: 'Fetched videos', videos: user.videos });
+    })
+    .catch((e) => {
+      if (!e.statusCode) {
+        e.statusCode = 500;
+      }
+      next(e);
+    });
+};
+
 exports.createVideo = (req, res, next) => {
   const errors = validationResult(req);
   const { title, imageUrl, description } = req.body;
@@ -45,7 +83,7 @@ exports.createVideo = (req, res, next) => {
     description,
     creator: req.userId,
   });
-  post
+  video
     .save()
     .then(() => {
       return User.findById(req.userId);

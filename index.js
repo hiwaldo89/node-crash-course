@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 
 const authRoutes = require('./routes/auth');
+const videoRoutes = require('./routes/videos');
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/videos', videoRoutes);
 
 app.use((error, req, res, next) => {
   const status = error.statusCode || 500;
@@ -30,9 +32,10 @@ app.use((error, req, res, next) => {
   const data = error.data;
   res.status(status).json({ message: message, data: data });
 });
+console.log(process.env.MONGO_URL);
 
 mongoose
-  .connect(process.env.MONGO_URL, {
+  .connect(`${process.env.MONGO_URL}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })

@@ -9,7 +9,6 @@ const Video = require('../models/video');
 dotenv.config();
 
 exports.signUp = (req, res, next) => {
-  console.log(req.body);
   const errors = validationResult(req);
   const { email, password, name } = req.body;
 
@@ -69,13 +68,11 @@ exports.login = (req, res, next) => {
         process.env.TOKEN_SECRET,
         { expiresIn: '5h' }
       );
-      res
-        .status(200)
-        .json({
-          token,
-          userId: signedInUser._id.toString(),
-          name: signedInUser.name,
-        });
+      res.status(200).json({
+        token,
+        userId: signedInUser._id.toString(),
+        name: signedInUser.name,
+      });
     })
     .catch((e) => {
       if (!e.statusCode) {
@@ -87,7 +84,6 @@ exports.login = (req, res, next) => {
 
 exports.updateUserFavoriteVideos = async (req, res, next) => {
   const { videoId } = req.body;
-  const video = await Video.findById(videoId);
 
   User.findById(req.userId)
     .then((user) => {
@@ -96,11 +92,18 @@ exports.updateUserFavoriteVideos = async (req, res, next) => {
         error.statusCode = 404;
         throw error;
       }
-      // TODO: Add or remove video from favorites array
+      if (user.videos.includes(videoId)) {
+        user.videos = user.videos.filter((video) => video !== videoId);
+      } else {
+        user.videos = [...user.videos, videoId];
+      }
       return user.save();
     })
-    .then(() => {
-      res.status(200).json({ message: 'Favorites updated' });
+    .then((savedUser) => {
+      res.status(200).json({
+        message: 'Favorites updated',
+        favorites: savedUser.favoriteVideos,
+      });
     })
     .catch((e) => {
       if (!e.statusCode) {

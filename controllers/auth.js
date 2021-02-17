@@ -18,25 +18,25 @@ exports.signUp = (req, res, next) => {
     throw error;
   }
 
-  // bcrypt
-  //   .hash(password, 12)
-  //   .then((hashedPassword) => {
-  //     const user = new User({
-  //       email,
-  //       password: hashedPassword,
-  //       name,
-  //     });
-  //     return user.save();
-  //   })
-  //   .then((result) => {
-  //     res.status(201).json({ message: 'User created', userId: result._id });
-  //   })
-  //   .catch((e) => {
-  //     if (!e.statusCode) {
-  //       e.statusCode = 500;
-  //     }
-  //     next(e);
-  //   });
+  bcrypt
+    .hash(password, 12)
+    .then((hashedPassword) => {
+      const user = new User({
+        email,
+        password: hashedPassword,
+        name,
+      });
+      return user.save();
+    })
+    .then((result) => {
+      res.status(201).json({ message: 'User created', userId: result._id });
+    })
+    .catch((e) => {
+      if (!e.statusCode) {
+        e.statusCode = 500;
+      }
+      next(e);
+    });
 };
 
 exports.login = (req, res, next) => {

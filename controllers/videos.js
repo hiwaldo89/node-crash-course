@@ -1,33 +1,23 @@
-const { validationResult } = require('express-validator/check');
+const { validationResult } = require('express-validator');
 
 const Video = require('../models/video');
 const User = require('../models/user');
 
-exports.getVideos = (req, res, next) => {
+exports.getVideos = async (req, res, next) => {
   const currentPage = req.query.page || 1;
   const perPage = 12;
-  let totalItems;
-  Video.find()
-    .countDocuments()
-    .then((count) => {
-      totalItems = count;
-      return Video.find()
-        .skip((currentPage - 1) * perPage)
-        .limit(perPage);
-    })
-    .then((videos) => {
-      res.status(200).json({
-        message: 'Videos fetched',
-        videos,
-        totalItems,
-      });
-    })
-    .catch((e) => {
-      if (!e.statusCode) {
-        e.statusCode = 500;
-      }
-      next(e);
-    });
+
+  try {
+    const totalVideos = await Video.find().countDocuments;
+    const videos = await Video.find()
+      .skip((currentPage - 1) * perPage)
+      .limit(perPage);
+    res.status(200).json({ message: 'Videos fetched', videos, totalVideos });
+    return;
+  } catch (err) {
+    next(err);
+    return err;
+  }
 };
 
 exports.getVideoById = (req, res, next) => {

@@ -15,5 +15,6 @@ router.post('/videos', isAuth, [
   body('imageUrl').trim().isLength({ min: 3 }),
   videosController.createVideo,
 ]);
+router.delete('/videos/:videoId', isAuth, videosController.deleteVideo);
 
 module.exports = router;

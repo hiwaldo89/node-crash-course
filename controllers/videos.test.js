@@ -9,6 +9,7 @@ const {
   getVideoById,
   getUserVideos,
   createVideo,
+  deleteVideo,
 } = require('./videos');
 
 jest.mock('express-validator');
@@ -28,7 +29,6 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  //await mongoose.connection.close();
   await mongoose.connection.close();
 });
 
@@ -178,6 +178,83 @@ describe('createVideo function', () => {
 
     await createVideo(req, res, () => {});
     expect(res.data.message).toBe('Video created');
+    done();
+  });
+});
+
+describe('deleteVideo function', () => {
+  test('Should throw error if video does not exist', async (done) => {
+    const req = {
+      params: {
+        videoId: mongoose.Types.ObjectId('602c0182b04cd012031f9e5a'),
+      },
+    };
+    const response = await deleteVideo(req, {}, () => {});
+    expect(response).toBeInstanceOf(Error);
+    expect(response.message).toBe('Could not find video');
+    done();
+  });
+
+  test('Should throw error user does not own the video', async (done) => {
+    const userOneMock = new User({
+      email: 'test@test.com',
+      password: 'testpassword',
+      name: 'testuser',
+    });
+    const userTwoMock = new User({
+      email: 'test2@test.com',
+      password: 'testpassword',
+      name: 'testuser2',
+    });
+    const userOne = await userOneMock.save();
+    const userTwo = await userTwoMock.save();
+
+    const mockVideo = new Video({
+      title: 'test title',
+      imageUrl: 'testimageurl',
+      description: 'test description',
+      creator: userOne._id,
+    });
+    const video = await mockVideo.save();
+
+    const req = {
+      params: {
+        videoId: video._id,
+      },
+      userId: userTwo._id,
+    };
+
+    const response = await deleteVideo(req, {}, () => {});
+    expect(response).toBeInstanceOf(Error);
+    expect(response.message).toBe('Not authorized!');
+    done();
+  });
+
+  test('Should remove video from users videos', async (done) => {
+    const mockUser = new User({
+      email: 'test@test.com',
+      password: 'testpassword',
+      name: 'testuser',
+    });
+    const user = await mockUser.save();
+
+    const mockVideo = new Video({
+      title: 'test title',
+      imageUrl: 'testimageurl',
+      description: 'test description',
+      creator: user._id,
+    });
+    const video = await mockVideo.save();
+
+    const req = {
+      params: {
+        videoId: video._id.toString(),
+      },
+      userId: user._id.toString(),
+    };
+
+    await deleteVideo(req, res, () => {});
+    expect(res.data.message).toBe('Deleted video');
     done();
   });
 });

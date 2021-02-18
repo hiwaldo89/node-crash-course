@@ -87,3 +87,31 @@ exports.createVideo = async (req, res, next) => {
     return err;
   }
 };
+
+exports.deleteVideo = async (req, res, next) => {
+  const { videoId } = req.params;
+
+  try {
+    const video = await Video.findById(videoId);
+    if (!video) {
+      const error = new Error('Could not find video');
+      error.statusCode = 404;
+      throw error;
+    }
+    if (video.creator.toString() !== req.userId) {
+      const error = new Error('Not authorized!');
+      error.statusCode = 403;
+      throw error;
+    }
+    await Video.findByIdAndRemove(videoId);
+    const user = await User.findById(req.userId);
+    user.videos.pull(videoId);
+    await user.save();
+
+    res.status(200).json({ message: 'Deleted video' });
+    return;
+  } catch (err) {
+    next(err);
+    return err;
+  }
+};

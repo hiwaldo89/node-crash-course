@@ -20,80 +20,70 @@ exports.getVideos = async (req, res, next) => {
   }
 };
 
-exports.getVideoById = (req, res, next) => {
-  const videoId = req.params.videoId;
-  Video.findById(videoId)
-    .then((video) => {
-      if (!video) {
-        const error = new Error('Cannot find video with that id');
-        error.statusCode = 404;
-        throw error;
-      }
-      res.status(200).json({ message: 'Fetched video', video });
-    })
-    .catch((e) => {
-      if (!e.statusCode) {
-        e.statusCode = 500;
-      }
-      next(e);
-    });
+exports.getVideoById = async (req, res, next) => {
+  const { videoId } = req.params;
+
+  try {
+    const video = await Video.findById(videoId);
+    if (!video) {
+      const error = new Error('Cannot find video with that id');
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({ message: 'Fetched video', video });
+    return;
+  } catch (err) {
+    next(err);
+    return err;
+  }
 };
 
-exports.getUserVideos = (req, res, next) => {
-  const userId = req.params.userId;
-  User.findById(userId)
-    .then((user) => {
-      if (!user) {
-        const error = new Error('Cannot find user');
-        error.statusCode = 404;
-        throw error;
-      }
-      res.status(200).json({ message: 'Fetched videos', videos: user.videos });
-    })
-    .catch((e) => {
-      if (!e.statusCode) {
-        e.statusCode = 500;
-      }
-      next(e);
-    });
+exports.getUserVideos = async (req, res, next) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      const error = new Error('Cannot find user');
+      error.statusCode = 404;
+      throw error;
+    }
+    res.status(200).json({ message: 'Fetched videos', videos: user.videos });
+    return;
+  } catch (err) {
+    next(err);
+    return err;
+  }
 };
 
-exports.createVideo = (req, res, next) => {
+exports.createVideo = async (req, res, next) => {
   const errors = validationResult(req);
   const { title, imageUrl, description } = req.body;
-  let creator;
-  if (!errors.isEmpty()) {
-    const error = new Error('Validation failed, entered data is incorrect.');
-    error.statusCode = 422;
-    throw error;
-  }
-  const video = new Video({
-    title,
-    imageUrl,
-    description,
-    creator: req.userId,
-  });
-  video
-    .save()
-    .then(() => {
-      return User.findById(req.userId);
-    })
-    .then((user) => {
-      creator = user;
-      user.videos.push(video);
-      return user.save();
-    })
-    .then(() => {
-      res.status(201).json({
-        message: 'Video created',
-        video,
-        creator: { _id: creator._id, name: creator.name },
-      });
-    })
-    .catch((e) => {
-      if (!e.statusCode) {
-        e.statusCode = 500;
-      }
-      next(e);
+
+  try {
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed, entered data is incorrect.');
+      error.statusCode = 422;
+      throw error;
+    }
+    const video = new Video({
+      title,
+      imageUrl,
+      description,
+      creator: req.userId,
     });
+    const savedVideo = await video.save();
+    const user = await User.findById(req.userId);
+    user.videos.push(savedVideo);
+    await user.save();
+    res.status(201).json({
+      message: 'Video created',
+      video: savedVideo,
+      creator: { _id: user._id, name: user.name },
+    });
+    return;
+  } catch (err) {
+    next(err);
+    return err;
+  }
 };

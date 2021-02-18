@@ -6,44 +6,23 @@ const User = require('../models/user');
 
 jest.mock('express-validator');
 
-const mockRes = {
-  json: function (data) {
-    this.data = data;
-  },
-  status: function (statusCode) {
-    this.statusCode = statusCode;
-    return this;
-  },
-};
-
-beforeAll(() => {
-  mongoose
-    .connect(`${process.env.MONGO_TEST_DB}`, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => {
-      const user = new User({
-        email: 'test@test.com',
-        password: 'tester',
-        name: 'Test',
-        _id: '5c0f66b979af55031b34728a',
-      });
-      user.save();
-    })
-    .catch((e) => console.log('err: ', e));
+beforeAll(async () => {
+  await mongoose.connect(`${process.env.MONGO_URL}`, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
 });
 
-afterAll(() => {
-  User.deleteMany({})
-    .then(() => {
-      return mongoose.disconnect();
-    })
-    .catch((e) => console.log('err: ', e));
+afterEach(async () => {
+  await User.deleteMany().exec();
+});
+
+afterAll(async () => {
+  await mongoose.connection.close();
 });
 
 describe('signUp function', () => {
-  test('Should throw an error if the body is not valid', (done) => {
+  test('Should throw an error if the body is not valid', async (done) => {
     const req = {
       body: { email: 'invalidemail', password: '', name: '' },
     };
@@ -52,17 +31,16 @@ describe('signUp function', () => {
       array: jest.fn().mockReturnValue([{ test: 'error' }]),
     }));
 
-    signUp(req, {}, () => {}).then((result) => {
-      expect(result).toBeInstanceOf(Error);
-      expect(result.message).toBe('Validation failed.');
-      done();
-    });
+    const result = await signUp(req, {}, () => {});
+    expect(result).toBeInstanceOf(Error);
+    expect(result.message).toBe('Validation failed.');
+    done();
   });
 
-  test('Should create user', (done) => {
+  test('Should create user', async (done) => {
     const req = {
       body: {
-        email: 'test2@test.com',
+        email: 'test@test.com',
         password: 'testpassword',
         name: 'testuser',
       },
@@ -80,63 +58,70 @@ describe('signUp function', () => {
       isEmpty: jest.fn().mockReturnValue(true),
     }));
 
-    signUp(req, res, () => {}).then(() => {
-      expect(res.statusCode).toBe(201);
-      done();
-    });
+    await signUp(req, res, () => {});
+    expect(res.statusCode).toBe(201);
+    done();
   });
 });
 
 describe('login function', () => {
-  test('Should throw and error if no user is found', (done) => {
+  test('Should throw and error if no user is found', async (done) => {
     const req = {
       body: {
         email: '',
         password: '',
       },
     };
-    login(req, {}, () => {}).then((res) => {
-      expect(res).toBeInstanceOf(Error);
-      expect(res.message).toBe('No user found with that information');
-      done();
-    });
+    const response = await login(req, {}, () => {});
+    expect(response).toBeInstanceOf(Error);
+    expect(response.message).toBe('No user found with that information');
+    done();
   });
 
-  test('Should throw error if password does not match', (done) => {
-    const req = {
+  test('Should throw error if password does not match', async (done) => {
+    const signupReq = {
+      body: {
+        email: 'test@test.com',
+        password: 'testpassword',
+        name: 'testuser',
+      },
+    };
+    const loginReq = {
       body: {
         email: 'test@test.com',
         password: 'incorrectpassword',
       },
     };
-    login(req, {}, () => {}).then((res) => {
-      expect(res).toBeInstanceOf(Error);
-      expect(res.message).toBe('Incorrect password');
-      done();
-    });
+
+    await signUp(signupReq, {}, () => {});
+    const response = await login(loginReq, {}, () => {});
+    expect(response).toBeInstanceOf(Error);
+    expect(response.message).toBe('Incorrect password');
+    done();
   });
 });
 
 describe('updateUserFavorites function', () => {
-  test('Should throw an error if no user is found', (done) => {
+  test('Should throw an error if no user is found', async (done) => {
     const req = {
-      userId: 'incorrectUserId',
+      userId: mongoose.Types.ObjectId('5c0f66b979af55031b34728a'),
       body: {
         videoId: 'test',
       },
     };
-    updateUserFavoriteVideos(req, {}, () => {}).then((res) => {
-      expect(res).toBeInstanceOf(Error);
-      done();
-    });
+    const response = await updateUserFavoriteVideos(req, {}, () => {});
+    expect(response).toBeInstanceOf(Error);
+    expect(response.message).toBe('User not found');
+    done();
   });
 
-  test('Should add video to favorites if its not already there or remove it if its already in there', (done) => {
+  test('Should add video to favorites if its not already there or remove it if its already in there', async (done) => {
     const videoId = mongoose.Types.ObjectId('602c0182b04cd012031f9e5a');
-    const req = {
-      userId: '5c0f66b979af55031b34728a',
+    const signupReq = {
       body: {
-        videoId,
+        email: 'test@test.com',
+        password: 'testpassword',
+        name: 'testuser',
       },
     };
     const res = {
@@ -148,12 +133,22 @@ describe('updateUserFavorites function', () => {
         return this;
       },
     };
-    updateUserFavoriteVideos(req, res, () => {}).then(() => {
-      expect(res.data.favorites).toContainEqual(videoId);
-      updateUserFavoriteVideos(req, res, () => {}).then(() => {
-        expect(res.data.favorites).not.toContainEqual(videoId);
-        done();
-      });
-    });
+
+    await signUp(signupReq, res, () => {});
+
+    const req = {
+      userId: res.data.userId,
+      body: {
+        videoId,
+      },
+    };
+
+    await updateUserFavoriteVideos(req, res, () => {});
+    expect(res.data.favorites).toContainEqual(videoId);
+
+    await updateUserFavoriteVideos(req, res, () => {});
+    expect(res.data.favorites).not.toContainEqual(videoId);
+
+    done();
   });
 });

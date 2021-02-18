@@ -1,11 +1,11 @@
 module.exports = {
   mongodbMemoryServerOptions: {
-    instance: {
-      dbName: 'jest',
-    },
     binary: {
-      version: '4.0.2', // Version of MongoDB
+      version: '4.0.3',
       skipMD5: true,
+    },
+    instance: {
+      dbName: 'testing',
     },
     autoStart: false,
   },

@@ -34,7 +34,7 @@ app.use((error, req, res, next) => {
 });
 
 mongoose
-  .connect(`${process.env.MONGO_URL}`, {
+  .connect(`${process.env.MONGO_PROD_URL}`, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })

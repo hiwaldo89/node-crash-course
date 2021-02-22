@@ -62,7 +62,7 @@ exports.login = async (req, res, next) => {
       { expiresIn: '5h' }
     );
 
-    res.status(200).json({ token, userId: loadedUser._id.toString() });
+    res.status(200).json({ token, userId: user._id.toString() });
     return;
   } catch (err) {
     if (!err.statusCode) {
